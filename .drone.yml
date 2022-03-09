@@ -1,0 +1,56 @@
+kind: pipeline
+name: default
+type: docker
+
+steps:
+  - name: build_and_publish_server
+    image: plugins/docker
+    settings:
+      repo: registry.fachr.in/reactive-cache
+      registry: registry.fachr.in
+      auto_tag: true
+      auto_tag_suffix: latest
+      dockerfile: ./build/Dockerfile.server
+      username:
+        from_secret: registry_username
+      password:
+        from_secret: registry_password
+  
+  - name: build_and_publish_worker
+    image: plugins/docker
+    settings:
+      repo: registry.fachr.in/reactive-cache-worker
+      registry: registry.fachr.in
+      auto_tag: true
+      auto_tag_suffix: latest
+      dockerfile: ./build/Dockerfile.worker
+      username:
+        from_secret: registry_username
+      password:
+        from_secret: registry_password
+
+  - name: deploy_production_server
+    image: appleboy/drone-ssh
+    settings:
+      host:
+        from_secret: runner_host
+      username:
+        from_secret: runner_username
+      password:
+        from_secret: runner_password
+      port: 22
+      script:
+        - deploy 2286f52b-ca25-4993-ae3b-b22533758c10
+
+  - name: deploy_production_worker
+    image: appleboy/drone-ssh
+    settings:
+      host:
+        from_secret: runner_host
+      username:
+        from_secret: runner_username
+      password:
+        from_secret: runner_password
+      port: 22
+      script:
+        - deploy aeae2e93-c038-4c5e-ae1c-82317b0d178d

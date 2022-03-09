@@ -10,8 +10,11 @@ class Repository:
 
     def increase_counter(self, username, counter_action):
         cursor = self.db_conn.cursor()
+
         query = "CALL update_profile_counter(%s, %s);"
         cursor.execute(query, (username, counter_action,))
+
+        self.db_conn.commit()
         cursor.close()
 
     def store_profile_cache(self, profile):

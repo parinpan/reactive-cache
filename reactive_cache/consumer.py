@@ -10,8 +10,12 @@ class ProfileChange:
         cursor = self.db_conn.cursor()
         cursor.execute("LISTEN profile_change;")
 
+        self.db_conn.commit()
+        cursor.close()
+
     def subscribe(self, callback):
         self.db_conn.poll()
+        self.db_conn.commit()
 
         for message in self.db_conn.notifies:
             try:

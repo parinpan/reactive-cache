@@ -1,5 +1,5 @@
-import psycopg2
 import redis
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 
 
@@ -7,17 +7,17 @@ class Postgres:
     conn_string = "host={} dbname={} user={} password={}"
 
     def __init__(self, conn):
-        self.connection = psycopg2.connect(
+        self.connection = pool.ThreadedConnectionPool(
+            5,
+            25,
             cursor_factory=RealDictCursor,
-            keepalives=1,
-            keepalives_idle=5,
-            keepalives_interval=2,
-            keepalives_count=2,
-            connect_timeout=3,
             port=conn["port"],
+            keepalives=1,
+            keepalives_idle=100,
+            keepalives_interval=10,
+            keepalives_count=10,
             dsn=Postgres.conn_string.format(conn["host"], conn["dbname"],
-                                            conn["username"], conn["password"])
-        )
+                                            conn["username"], conn["password"])).getconn()
 
     def get_connection(self):
         return self.connection

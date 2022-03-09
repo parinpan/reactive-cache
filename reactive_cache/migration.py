@@ -3,7 +3,7 @@ from yoyo import get_backend
 
 
 def run(conn, migration_path):
-    conn_str = "postgres://{}@{}:{}/{}".format(conn["username"], conn["host"], conn["port"], conn["dbname"])
+    conn_str = "postgres://{}:{}@{}:{}/{}".format(conn["username"], conn["password"], conn["host"], conn["port"], conn["dbname"])
     backend = get_backend(conn_str)
     migrations = read_migrations(migration_path)
 

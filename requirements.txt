@@ -1,0 +1,5 @@
+psycopg2-binary==2.9.3
+waitress==2.1.0
+redis==3.5.3
+Flask==2.0.3
+yoyo_migrations==7.3.2
