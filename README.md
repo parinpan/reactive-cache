@@ -1,6 +1,8 @@
 # reactive-cache
 [![Build Status](https://drone.fachr.in/api/badges/parinpan/reactive-cache/status.svg)](https://drone.fachr.in/parinpan/reactive-cache)
 
+Play around the demo here: https://rc.fachr.in
+
 Please read more about the detail on Medium: https://fachrinfan.medium.com/postgresql-as-a-message-broker-to-apply-a-reactive-caching-strategy-57e7f8f7dd0e
 
 ## Application Architecture
