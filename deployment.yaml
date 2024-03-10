@@ -7,8 +7,8 @@ metadata:
 
 ---
 
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
   name: fachrin-reactive-cache-db
   namespace: fachrin
@@ -113,12 +113,16 @@ spec:
           value: 'reactive-cache-db.fachrin.svc.cluster.local'
         - name: DB_PORT
           value: '5432'
+        - name: DB_USERNAME
+          value: 'reactive-cache'
+        - name: DB_PASSWORD
+          value: ''
         - name: DB_NAME
           value: 'reactive-cache'
         - name: build_date
           value: '{{build_date}}'
 
---- 
+---
 
 apiVersion: v1
 kind: Service
