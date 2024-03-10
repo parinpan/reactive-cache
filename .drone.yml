@@ -1,56 +1,160 @@
-kind: pipeline
-name: default
-type: docker
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fachrin
+  labels:
+    name: fachrin
 
-steps:
-  - name: build_and_publish_server
-    image: plugins/docker
-    settings:
-      repo: registry.fachr.in/reactive-cache
-      registry: registry.fachr.in
-      auto_tag: true
-      auto_tag_suffix: latest
-      dockerfile: ./build/Dockerfile.server
-      username:
-        from_secret: registry_username
-      password:
-        from_secret: registry_password
-  
-  - name: build_and_publish_worker
-    image: plugins/docker
-    settings:
-      repo: registry.fachr.in/reactive-cache-worker
-      registry: registry.fachr.in
-      auto_tag: true
-      auto_tag_suffix: latest
-      dockerfile: ./build/Dockerfile.worker
-      username:
-        from_secret: registry_username
-      password:
-        from_secret: registry_password
+---
 
-  - name: deploy_production_server
-    image: appleboy/drone-ssh
-    settings:
-      host:
-        from_secret: runner_host
-      username:
-        from_secret: runner_username
-      password:
-        from_secret: runner_password
-      port: 22
-      script:
-        - deploy 2286f52b-ca25-4993-ae3b-b22533758c10
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fachrin-reactive-cache-db
+  namespace: fachrin
+spec:
+  replicas: 1
+  spec:
+    serviceAccountName: k3s-fachrin-sa
+    containers:
+      - name: reactive-cache-db
+        image: postgres:latest
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: 'reactive-cache'
+        - name: POSTGRES_USER
+          value: 'reactive-cache'
+        - name: POSTGRES_PASSWORD
+          value: ''
+        - name: POSTGRES_HOST_AUTH_METHOD
+          value: 'trust'
 
-  - name: deploy_production_worker
-    image: appleboy/drone-ssh
-    settings:
-      host:
-        from_secret: runner_host
-      username:
-        from_secret: runner_username
-      password:
-        from_secret: runner_password
-      port: 22
-      script:
-        - deploy aeae2e93-c038-4c5e-ae1c-82317b0d178d
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fachrin-reactive-cache-redis
+  namespace: fachrin
+spec:
+  serviceAccountName: k3s-fachrin-sa
+  containers:
+  - name: reactive-cache-redis
+    image: redis:latest
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    command:
+      - redis-server
+    env:
+    - name: MASTER
+      value: "true"
+    ports:
+    - containerPort: 6379
+    resources:
+      limits:
+        cpu: "0.1"
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reactive-cache
+  namespace: fachrin
+  labels:
+    app: fachrin-reactive-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fachrin-reactive-cache
+  template:
+    metadata:
+      labels:
+        app: fachrin-reactive-cache
+    spec:
+      serviceAccountName: k3s-fachrin-sa
+      containers:
+      - name: reactive-cache
+        image: registry-intl.ap-southeast-5.aliyuncs.com/fachrin/reactive-cache
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8081
+        env:
+        - name: REDIS_HOST
+          value: 'reactive-cache-redis.fachrin.svc.cluster.local'
+        - name: REDIS_PORT
+          value: '6379'
+        - name: REDIS_DB
+          value: '0'
+        - name: DB_HOST
+          value: 'reactive-cache-db.fachrin.svc.cluster.local'
+        - name: DB_PORT
+          value: '5432'
+        - name: DB_NAME
+          value: 'reactive-cache'
+        - name: build_date
+          value: '{{build_date}}'
+
+--- 
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: reactive-cache
+  namespace: fachrin
+spec:
+  ports:
+  - port: 8081
+    targetPort: 8081
+  selector:
+    app: fachrin-reactive-cache
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: reactive-cache
+  namespace: fachrin
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-universal"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - rc.fachr.in
+    secretName: fachrin-reactive-cache-tls
+  rules:
+    - host: rc.fachr.in
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: web
+                port:
+                  number: 8081
