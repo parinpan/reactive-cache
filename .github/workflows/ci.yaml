@@ -19,13 +19,21 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           
-      - name: Build and Push
+      - name: Build and Push Server
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./build/Dockerfile
+          file: ./build/Dockerfile.server
           push: true
-          tags: registry-intl.ap-southeast-5.aliyuncs.com/fachrin/reactive-cache:latest
+          tags: registry-intl.ap-southeast-5.aliyuncs.com/fachrin/reactive-cache-server:latest
+          
+      - name: Build and Push Worker
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./build/Dockerfile.worker
+          push: true
+          tags: registry-intl.ap-southeast-5.aliyuncs.com/fachrin/reactive-cache-worker:latest
 
   deploy:
     name: Production Deployment
