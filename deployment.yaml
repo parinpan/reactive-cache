@@ -117,7 +117,7 @@ metadata:
   labels:
     app: fachrin-reactive-cache
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: fachrin-reactive-cache
