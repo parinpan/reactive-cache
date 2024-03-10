@@ -91,7 +91,7 @@ spec:
       serviceAccountName: k3s-fachrin-sa
       containers:
       - name: reactive-cache
-        image: registry-intl.ap-southeast-5.aliyuncs.com/fachrin/reactive-cache
+        image: registry-intl.ap-southeast-5.aliyuncs.com/fachrin/reactive-cache-server
         imagePullPolicy: Always
         resources:
           requests:
@@ -102,6 +102,57 @@ spec:
             cpu: "500m"
         ports:
         - containerPort: 8081
+        env:
+        - name: REDIS_HOST
+          value: 'reactive-cache-redis.fachrin.svc.cluster.local'
+        - name: REDIS_PORT
+          value: '6379'
+        - name: REDIS_DB
+          value: '0'
+        - name: DB_HOST
+          value: 'reactive-cache-db.fachrin.svc.cluster.local'
+        - name: DB_PORT
+          value: '5432'
+        - name: DB_USERNAME
+          value: 'reactive-cache'
+        - name: DB_PASSWORD
+          value: ''
+        - name: DB_NAME
+          value: 'reactive-cache'
+        - name: build_date
+          value: '{{build_date}}'
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reactive-cache-worker
+  namespace: fachrin
+  labels:
+    app: fachrin-reactive-cache-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fachrin-reactive-cache-worker
+  template:
+    metadata:
+      labels:
+        app: fachrin-reactive-cache=worker
+    spec:
+      serviceAccountName: k3s-fachrin-sa
+      containers:
+      - name: reactive-cache-worker
+        image: registry-intl.ap-southeast-5.aliyuncs.com/fachrin/reactive-cache-worker
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
         env:
         - name: REDIS_HOST
           value: 'reactive-cache-redis.fachrin.svc.cluster.local'
@@ -159,6 +210,6 @@ spec:
             path: "/"
             backend:
               service:
-                name: web
+                name: reactive-cache
                 port:
                   number: 8081
