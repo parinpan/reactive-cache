@@ -10,7 +10,7 @@ metadata:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: fachrin-reactive-cache-db
+  name: reactive-cache-db
   namespace: fachrin
 spec:
   serviceAccountName: k3s-fachrin-sa
@@ -42,7 +42,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: fachrin-reactive-cache-redis
+  name: reactive-cache-redis
   namespace: fachrin
 spec:
   serviceAccountName: k3s-fachrin-sa
