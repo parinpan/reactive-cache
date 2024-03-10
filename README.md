@@ -1,5 +1,4 @@
 # reactive-cache
-[![Build Status](https://drone.fachr.in/api/badges/parinpan/reactive-cache/status.svg)](https://drone.fachr.in/parinpan/reactive-cache)
 
 Play around the demo here: https://rc.fachr.in
 
