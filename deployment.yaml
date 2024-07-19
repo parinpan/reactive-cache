@@ -201,13 +201,13 @@ spec:
         - containerPort: 8081
         env:
         - name: REDIS_HOST
-          value: '10-42-0-42.fachrin.pod.cluster.local'
+          value: 'reactive-cache-redis.fachrin.svc.cluster.local'
         - name: REDIS_PORT
           value: '6379'
         - name: REDIS_DB
           value: '0'
         - name: DB_HOST
-          value: '10-42-0-41.fachrin.pod.cluster.local'
+          value: 'reactive-cache-db.fachrin.svc.cluster.local'
         - name: DB_PORT
           value: '5432'
         - name: DB_USERNAME
