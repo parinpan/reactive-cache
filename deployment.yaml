@@ -1,9 +1,10 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: fachrin
+  name: apps
   labels:
-    name: fachrin
+    name: apps
+    usage: personal-applications
 
 ---
 
@@ -11,7 +12,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: reactive-cache-db
-  namespace: fachrin
+  namespace: apps
+  labels:
+    app: reactive-cache-db
 spec:
   replicas: 1
   selector:
@@ -22,29 +25,21 @@ spec:
       labels:
         app: reactive-cache-db
     spec:
-      serviceAccountName: k3s-fachrin-sa
       containers:
-        - name: reactive-cache-db
-          image: postgres:latest
-          resources:
-            requests:
-              memory: "64Mi"
-              cpu: "250m"
-            limits:
-              memory: "128Mi"
-              cpu: "500m"
-          imagePullPolicy: IfNotPresent
-          ports:
-          - containerPort: 5432
-          env:
-          - name: POSTGRES_DB
-            value: 'reactive-cache'
-          - name: POSTGRES_USER
-            value: 'reactive-cache'
-          - name: POSTGRES_PASSWORD
-            value: ''
-          - name: POSTGRES_HOST_AUTH_METHOD
-            value: 'trust'
+      - name: reactive-cache-db
+        image: postgres:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: 'reactive-cache'
+        - name: POSTGRES_USER
+          value: 'reactive-cache'
+        - name: POSTGRES_PASSWORD
+          value: ''
+        - name: POSTGRES_HOST_AUTH_METHOD
+          value: 'trust'
 
 ---
 
@@ -52,15 +47,13 @@ apiVersion: v1
 kind: Service
 metadata:
   name: reactive-cache-db
-  namespace: fachrin
+  namespace: apps
 spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
   selector:
     app: reactive-cache-db
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
-  type: ClusterIP
 
 ---
 
@@ -68,7 +61,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: reactive-cache-redis
-  namespace: fachrin
+  namespace: apps
+  labels:
+    app: reactive-cache-redis
 spec:
   replicas: 1
   selector:
@@ -79,27 +74,14 @@ spec:
       labels:
         app: reactive-cache-redis
     spec:
-      serviceAccountName: k3s-fachrin-sa
       containers:
       - name: reactive-cache-redis
         image: redis:latest
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "250m"
-          limits:
-            memory: "128Mi"
-            cpu: "500m"
+        imagePullPolicy: IfNotPresent
         command:
           - redis-server
-        env:
-        - name: MASTER
-          value: "true"
         ports:
         - containerPort: 6379
-        resources:
-          limits:
-            cpu: "0.1"
 
 ---
 
@@ -107,15 +89,13 @@ apiVersion: v1
 kind: Service
 metadata:
   name: reactive-cache-redis
-  namespace: fachrin
+  namespace: apps
 spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
   selector:
     app: reactive-cache-redis
-  ports:
-  - protocol: TCP
-    port: 6379
-    targetPort: 6379
-  type: ClusterIP
 
 ---
 
@@ -123,7 +103,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: reactive-cache-worker
-  namespace: fachrin
+  namespace: apps
+  labels:
+    app: reactive-cache-worker
 spec:
   replicas: 1
   selector:
@@ -134,27 +116,19 @@ spec:
       labels:
         app: reactive-cache-worker
     spec:
-      serviceAccountName: k3s-fachrin-sa
       containers:
       - name: reactive-cache-worker
-        image: registry-intl.ap-southeast-5.aliyuncs.com/fachrin/reactive-cache-worker
+        image: ghcr.io/parinpan/reactive-cache-worker:latest
         imagePullPolicy: Always
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "250m"
-          limits:
-            memory: "128Mi"
-            cpu: "500m"
         env:
         - name: REDIS_HOST
-          value: 'reactive-cache-redis.fachrin.svc.cluster.local'
+          value: 'reactive-cache-redis.apps.svc.cluster.local'
         - name: REDIS_PORT
           value: '6379'
         - name: REDIS_DB
           value: '0'
         - name: DB_HOST
-          value: 'reactive-cache-db.fachrin.svc.cluster.local'
+          value: 'reactive-cache-db.apps.svc.cluster.local'
         - name: DB_PORT
           value: '5432'
         - name: DB_USERNAME
@@ -165,49 +139,41 @@ spec:
           value: 'reactive-cache'
         - name: build_date
           value: '{{build_date}}'
-        
+
 ---
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: reactive-cache
-  namespace: fachrin
+  name: reactive-cache-server
+  namespace: apps
   labels:
-    app: fachrin-reactive-cache
+    app: reactive-cache-server
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
-      app: fachrin-reactive-cache
+      app: reactive-cache-server
   template:
     metadata:
       labels:
-        app: fachrin-reactive-cache
+        app: reactive-cache-server
     spec:
-      serviceAccountName: k3s-fachrin-sa
       containers:
-      - name: reactive-cache
-        image: registry-intl.ap-southeast-5.aliyuncs.com/fachrin/reactive-cache-server
+      - name: reactive-cache-server
+        image: ghcr.io/parinpan/reactive-cache-server:latest
         imagePullPolicy: Always
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "250m"
-          limits:
-            memory: "128Mi"
-            cpu: "500m"
         ports:
         - containerPort: 8081
         env:
         - name: REDIS_HOST
-          value: 'reactive-cache-redis.fachrin.svc.cluster.local'
+          value: 'reactive-cache-redis.apps.svc.cluster.local'
         - name: REDIS_PORT
           value: '6379'
         - name: REDIS_DB
           value: '0'
         - name: DB_HOST
-          value: 'reactive-cache-db.fachrin.svc.cluster.local'
+          value: 'reactive-cache-db.apps.svc.cluster.local'
         - name: DB_PORT
           value: '5432'
         - name: DB_USERNAME
@@ -224,38 +190,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: reactive-cache
-  namespace: fachrin
+  name: reactive-cache-server-service
+  namespace: apps
 spec:
   ports:
   - port: 8081
     targetPort: 8081
   selector:
-    app: fachrin-reactive-cache
-
----
-
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: reactive-cache
-  namespace: fachrin
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-universal"
-spec:
-  ingressClassName: nginx
-  tls:
-  - hosts:
-    - rc.fachr.in
-    secretName: fachrin-reactive-cache-tls
-  rules:
-    - host: rc.fachr.in
-      http:
-        paths:
-          - pathType: Prefix
-            path: "/"
-            backend:
-              service:
-                name: reactive-cache
-                port:
-                  number: 8081
+    app: reactive-cache-server
